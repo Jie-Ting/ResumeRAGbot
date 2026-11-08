@@ -202,7 +202,8 @@ test('failed LINE delivery releases claim; rejected token never triggers a push'
   state.response = () => ({ status: 400, body: {} });
   assert.equal(gas.handleEvent_(event(), gas.config_()), 'reply_rejected');
   assert.equal(gas.handleEvent_(event(), gas.config_()), 'duplicate');
-  assert.equal(state.calls.length, 2);
+  // 卡片被退時會再用純文字試一次（同一個 replyToken），所以是 503、400（卡片）、400（純文字）三次。
+  assert.equal(state.calls.length, 3);
 });
 
 test('initialization preserves credentials and generates a token only when missing', () => {

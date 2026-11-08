@@ -276,13 +276,25 @@ function startLoading_(userId, cfg) {
  */
 function lineReply_(token, messages, cfg) {
   requireValue_(cfg.lineToken, 'LINE_CHANNEL_ACCESS_TOKEN');
-  var result = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
-    method: 'post', contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + cfg.lineToken },
-    payload: JSON.stringify({ replyToken: token, messages: messages }), muteHttpExceptions: true
-  });
-  var status = result.getResponseCode();
+  // fallbackText 是程式自己的欄位，送給 LINE 前要拿掉。
+  function send(list) {
+    return UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+      method: 'post', contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + cfg.lineToken },
+      payload: JSON.stringify({ replyToken: token, messages: list.map(function (m) { var copy = {}; Object.keys(m).forEach(function (k) { if (k !== 'fallbackText') copy[k] = m[k]; }); return copy; }) }), muteHttpExceptions: true
+    }).getResponseCode();
+  }
+  var status = send(messages);
   if (status >= 200 && status < 300) return 'replied';
+  // 卡片格式被退（400）時 replyToken 尚未用掉：改送純文字版，訪客至少看得到結果，不會只剩已讀。
+  if (status === 400 && messages.some(function (m) { return m.type === 'flex'; })) {
+    safeLog_('LINE_REPLY_400_FLEX_FALLBACK');
+    var plain = messages.filter(function (m) { return m.type !== 'sticker'; }).map(function (m) {
+      return m.type === 'flex' ? textMessage_(Array.from(String(m.fallbackText || m.altText || '卡片顯示失敗，請稍後再試。')).slice(0, 4500).join('')) : m;
+    });
+    status = send(plain);
+    if (status >= 200 && status < 300) return 'replied';
+  }
   // replyToken 只能使用一次；結果不明時不改用 Push，避免重複或額外計費。
   if (status === 400) { safeLog_('LINE_REPLY_400'); return 'reply_rejected'; }
   throw new Error('LINE_HTTP_' + status);

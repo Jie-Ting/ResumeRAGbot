@@ -2109,13 +2109,25 @@ function startLoading_(userId, cfg) {
  */
 function lineReply_(token, messages, cfg) {
   requireValue_(cfg.lineToken, 'LINE_CHANNEL_ACCESS_TOKEN');
-  var result = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
-    method: 'post', contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + cfg.lineToken },
-    payload: JSON.stringify({ replyToken: token, messages: messages }), muteHttpExceptions: true
-  });
-  var status = result.getResponseCode();
+  // fallbackText 是程式自己的欄位，送給 LINE 前要拿掉。
+  function send(list) {
+    return UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+      method: 'post', contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + cfg.lineToken },
+      payload: JSON.stringify({ replyToken: token, messages: list.map(function (m) { var copy = {}; Object.keys(m).forEach(function (k) { if (k !== 'fallbackText') copy[k] = m[k]; }); return copy; }) }), muteHttpExceptions: true
+    }).getResponseCode();
+  }
+  var status = send(messages);
   if (status >= 200 && status < 300) return 'replied';
+  // 卡片格式被退（400）時 replyToken 尚未用掉：改送純文字版，訪客至少看得到結果，不會只剩已讀。
+  if (status === 400 && messages.some(function (m) { return m.type === 'flex'; })) {
+    safeLog_('LINE_REPLY_400_FLEX_FALLBACK');
+    var plain = messages.filter(function (m) { return m.type !== 'sticker'; }).map(function (m) {
+      return m.type === 'flex' ? textMessage_(Array.from(String(m.fallbackText || m.altText || '卡片顯示失敗，請稍後再試。')).slice(0, 4500).join('')) : m;
+    });
+    status = send(plain);
+    if (status >= 200 && status < 300) return 'replied';
+  }
   // replyToken 只能使用一次；結果不明時不改用 Push，避免重複或額外計費。
   if (status === 400) { safeLog_('LINE_REPLY_400'); return 'reply_rejected'; }
   throw new Error('LINE_HTTP_' + status);
@@ -2894,7 +2906,11 @@ function jobMatchResultCard_(state, cfg, prepared) {
     action: { type: 'postback', label: '產生面談問題', data: 'jobmatch:questions:' + state.id, displayText: '產生面談問題' },
     contents: [cardText_('產生面談問題', 'sm', '#FFFFFF', true, { align: 'center' })] };
   var quick = [['產生面談問題', 'jobmatch:questions:' + state.id], ['留下邀約', 'invite:start'], ['改條件', 'jobmatch:review'], ['再比一個職缺', 'jobmatch:restart'], ['回名片', 'nav:home']];
-  return { type: 'flex', altText: '職缺比對結果：符合 ' + counts.match + '、待確認 ' + counts.unknown + '、不符 ' + counts.mismatch, quickReply: jobMatchQuickReply_(quick), contents: { type: 'bubble', size: 'mega',
+  // 純文字備援：卡片萬一被 LINE 退件，仍把逐項結果送到。
+  var fallback = home.name + ' 與「' + (state.fields.title || '職缺') + '」的對照\n符合 ' + counts.match + '・待確認 ' + counts.unknown + '・不符 ' + counts.mismatch + '\n\n' +
+    items.map(function (item) { return (item.status === 'match' ? '✔ ' : item.status === 'unknown' ? '？ ' : '✘ ') + (JOBMATCH_KIND_LABELS_[item.kind] || item.kind) + JOBMATCH_STATUS_LABELS_[item.status] + '：' + item.label + (item.quote ? '\n　「' + Array.from(item.quote).slice(0, 40).join('') + '」' : item.note ? '\n　' + item.note : ''); }).join('\n') +
+    '\n\n「？」代表履歷沒提到，不代表不會。輸入「產生面談問題」可整理成提問清單。';
+  return { type: 'flex', fallbackText: fallback, altText: '職缺比對結果：符合 ' + counts.match + '、待確認 ' + counts.unknown + '、不符 ' + counts.mismatch, quickReply: jobMatchQuickReply_(quick), contents: { type: 'bubble', size: 'mega',
     header: { type: 'box', layout: 'vertical', paddingAll: '16px', paddingBottom: '12px', backgroundColor: c.accent, spacing: 'xs', contents: [
       cardText_('JOB MATCH ・ ' + (state.fields.title || '職缺比對'), 'xxs', '#B9C8E6', false),
       cardText_(home.name + ' 與這個職缺的對照', 'md', '#FFFFFF', true)
@@ -3031,6 +3047,7 @@ function handleJobMatch_(event, text, cfg, prepared) {
       return matchAndReply();
     }
     var questions = /^jobmatch:questions:([a-f0-9]{32})$/.exec(text);
+    if (!questions && /^產生面談問題$/.test(text) && state.stage === 'done') questions = [text, state.id];
     if (questions) {
       if (state.id !== questions[1] || state.stage !== 'done' || !state.results) return [jobMatchText_('比對結果已過期，請重新比對。', [['貼職缺比對', 'jobmatch:start']])];
       return remember([jobMatchQuestions_(state)]);

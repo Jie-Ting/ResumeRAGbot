@@ -125,3 +125,20 @@ test('several postings in one paste: the visitor picks one, gets its result, and
   const again=last(f)[0];assert.match(again.text,/2\. 前端工程師（已比對）/);
   f.gas.handleEvent_(event('1','m6'),cfg);assert.match(JSON.stringify(last(f)[0].contents.header),/AI 應用工程師/);
 });
+
+test('when LINE rejects the result card, the same reply token gets a plain-text version of the results',()=>{
+  const f=fixture(),cfg=f.gas.config_(),prior=f.state.response;
+  let rejected=0;
+  f.state.response=call=>{
+    if(call.url.endsWith('/message/reply')&&call.body.messages.some(m=>m.type==='flex'&&/職缺比對結果/.test(m.altText||''))){rejected++;return {status:400,body:{message:'invalid'}};}
+    return prior(call);
+  };
+  f.gas.handleEvent_(post('jobmatch:start','f1'),cfg);f.gas.handleEvent_(post('jobmatch:paste','f2'),cfg);
+  f.gas.handleEvent_(event(JD,'f3'),cfg);
+  const replies=f.state.calls.filter(c=>c.url.endsWith('/message/reply'));
+  const sent=replies.at(-1).body.messages;
+  assert.equal(replies.at(-2).body.messages[0].type,'flex');assert.equal(sent[0].type,'text');
+  assert.match(sent[0].text,/符合 4・待確認 4/);assert.match(sent[0].text,/✔ 地點符合：台北市內湖區/);assert.match(sent[0].text,/？ 技能待確認：SQL/);
+  assert(!JSON.stringify(replies.at(-2).body).includes('fallbackText'),'internal fallbackText must not be sent to LINE');
+  f.gas.handleEvent_(event('產生面談問題','f4'),cfg);assert.match(last(f)[0].text,/面談問題/);
+});
