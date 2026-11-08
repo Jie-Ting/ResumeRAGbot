@@ -30,19 +30,13 @@ function fixture(){
 const post=(data,id)=>({...event('',id),type:'postback',postback:{data}});
 const last=f=>f.state.calls.filter(c=>c.url.endsWith('/message/reply')).at(-1).body.messages;
 
-test('paste flow: chooser → paste → AI-parsed confirmation → rule and evidence based result card',()=>{
+test('paste flow: chooser → paste → result card straight away, with a review card to adjust conditions',()=>{
   const f=fixture(),cfg=f.gas.config_(),writes=f.state.documentWrites;
   f.gas.handleEvent_(post('jobmatch:start','s1'),cfg);
   const chooser=last(f)[0];assert.equal(chooser.type,'flex');assert.match(JSON.stringify(chooser),/直接貼上職缺/);
   f.gas.handleEvent_(post('jobmatch:paste','s2'),cfg);assert.match(last(f)[0].text,/貼上來/);
   assert(JD.length>800,'the fixture job posting must exceed the ordinary 800-character question limit');
   f.gas.handleEvent_(event(JD,'s3'),cfg);
-  const confirm=last(f)[0],cj=JSON.stringify(confirm);
-  assert.match(cj,/我整理成這樣/);assert.match(cj,/台北市內湖區/);assert.match(cj,/3 年以上/);assert.match(cj,/"Python"/);assert.match(cj,/Google Apps Script/);
-  assert(!cj.includes('不存在的條件'),'parsed skills must be literal substrings of the job posting');
-  assert.match(cj,/薪資不比對/);
-  const confirmData=confirm.contents.footer.contents[0].action.data;assert.match(confirmData,/^jobmatch:confirm:[a-f0-9]{32}$/);
-  f.gas.handleEvent_(post(confirmData,'s4'),cfg);
   const result=last(f)[0],rj=JSON.stringify(result);
   assert.match(result.altText,/符合 4、待確認 4、不符 0/);
   const rows=result.contents.body.contents[4].contents.map(r=>JSON.stringify(r));
@@ -52,7 +46,12 @@ test('paste flow: chooser → paste → AI-parsed confirmation → rule and evid
   assert.match(rows.find(r=>r.includes('"Python"')),/✔/);assert.match(rows.find(r=>r.includes('"Python"')),/pandas/);
   assert.match(rows.find(r=>r.includes('"SQL"')),/？/);assert.match(rows.find(r=>r.includes('"SQL"')),/引用無法對回履歷/);
   assert(!rj.includes('PostgreSQL 與 MySQL'),'an unverifiable quote must never be shown');
-  assert.match(rj,/薪資：面談確認/);
+  assert.match(rj,/薪資：面談確認/);assert.match(rj,/比對條件：台北市內湖區・3 年以上・資訊相關科系/);
+  assert(!rj.includes('不存在的條件'),'parsed skills must be literal substrings of the job posting');
+  f.gas.handleEvent_(post('jobmatch:review','s4b'),cfg);
+  const review=last(f)[0],cj=JSON.stringify(review);assert.match(cj,/改好後再比一次/);assert.match(cj,/台北市內湖區/);assert.match(cj,/"Python"/);assert.match(cj,/Google Apps Script/);
+  f.gas.handleEvent_(post(review.contents.footer.contents[0].action.data,'s4c'),cfg);
+  assert.match(last(f)[0].altText,/符合 4、待確認 4、不符 0/);
   const questionsData=result.contents.footer.contents[0].action.data;
   f.gas.handleEvent_(post(questionsData,'s5'),cfg);
   const questions=last(f)[0].text;assert.match(questions,/SQL：履歷未提到/);assert.match(questions,/REST API/);assert.match(questions,/薪資與到職日/);
@@ -71,9 +70,7 @@ test('step flow collects answers from buttons and text, allows skipping, and the
   f.gas.handleEvent_(event('SQL, Python',"t6"),cfg);
   f.gas.handleEvent_(post('jobmatch:skip','t7'),cfg);
   f.gas.handleEvent_(post('jobmatch:answer:碩士以上','t8'),cfg);
-  const confirm=last(f)[0];assert.match(JSON.stringify(confirm),/資料分析師/);assert.match(JSON.stringify(confirm),/新北/);
-  f.gas.handleEvent_(post(confirm.contents.footer.contents[0].action.data,'t9'),cfg);
-  const result=last(f)[0];assert.match(result.altText,/符合 2、待確認 1、不符 2/);
+  const result=last(f)[0];assert.match(result.altText,/符合 2、待確認 1、不符 2/);assert.match(JSON.stringify(result),/資料分析師/);
   const rows=result.contents.body.contents[4].contents.map(r=>JSON.stringify(r));
   assert.match(rows.find(r=>r.includes('"新北"')),/✔/);
   assert.match(rows.find(r=>r.includes('5 年以上')),/✘/);assert.match(rows.find(r=>r.includes('5 年以上')),/四年三個月/);

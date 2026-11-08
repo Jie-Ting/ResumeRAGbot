@@ -2074,7 +2074,7 @@ function exploreMenu_(cfg, prepared) {
  * 訪客輸入「使用說明」時顯示的操作方法。
  */
 function helpText_() {
-  return '輸入「聯繫本人」「想約面試」或「想合作」，可查看 Email 或留下邀約。\n\n人資可按「貼職缺比對」：貼上職缺後，我會先整理成條件清單給你確認，再逐項對照履歷，列出有依據、待確認與不符的條件。\n\n你可以直接提問，例如：\n• 請用 30 秒介紹這位求職者。\n• 有哪些工作經歷與具體成果？\n• 做過哪些與資料分析相關的專案？\n• 這份履歷有哪些符合產品經理職缺的條件？\n• 如何聯絡本人？\n\n約 10 分鐘內可接續追問同一件作品，例如「這張用了什麼配色？」；輸入「清除對話」可重新開始。短期記憶可能提早失效，屆時請補上作品名稱。回答依據公開履歷；找不到足夠資料的問題會記錄給履歷主人確認與補充。\n\n隨時輸入「首頁」「選單」或「回首頁」，就能重新開啟三張履歷卡；輸入「隱私」查看資料使用方式。';
+  return '輸入「聯繫本人」「想約面試」或「想合作」，可查看 Email 或留下邀約。\n\n人資可按「貼職缺比對」：貼上職缺後直接逐項對照履歷，列出有依據、待確認與不符的條件；結果卡可按「改條件」調整再比一次。\n\n你可以直接提問，例如：\n• 請用 30 秒介紹這位求職者。\n• 有哪些工作經歷與具體成果？\n• 做過哪些與資料分析相關的專案？\n• 這份履歷有哪些符合產品經理職缺的條件？\n• 如何聯絡本人？\n\n約 10 分鐘內可接續追問同一件作品，例如「這張用了什麼配色？」；輸入「清除對話」可重新開始。短期記憶可能提早失效，屆時請補上作品名稱。回答依據公開履歷；找不到足夠資料的問題會記錄給履歷主人確認與補充。\n\n隨時輸入「首頁」「選單」或「回首頁」，就能重新開啟三張履歷卡；輸入「隱私」查看資料使用方式。';
 }
 
 /**
@@ -2573,11 +2573,11 @@ function jobMatchChooser_(cfg, prepared) {
   }
   return { type: 'flex', altText: '把職缺給我，我幫你對照履歷', quickReply: jobMatchQuickReply_([['取消比對', 'jobmatch:cancel']]), contents: { type: 'bubble', size: 'mega',
     header: { type: 'box', layout: 'horizontal', paddingAll: '12px', paddingStart: '16px', backgroundColor: c.accent, contents: [
-      cardText_('JOB MATCH', 'xxs', '#FFFFFF', false), cardText_('1 / 2', 'xxs', '#B9C8E6', false, { align: 'end' })
+      cardText_('JOB MATCH', 'xxs', '#FFFFFF', false), cardText_('貼上就比', 'xxs', '#B9C8E6', false, { align: 'end' })
     ] },
     body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'md', backgroundColor: '#FFFFFF', contents: [
       cardText_('把職缺給我，我幫你對照' + home.name + '的履歷', 'md', c.ink, true),
-      cardText_('結果會列出：有履歷依據的條件、履歷沒提到要面試問的，以及對不上的。不打分數。職缺內容只暫存約 30 分鐘，不交給本人。', 'xxs', c.sub, false),
+      cardText_('貼上後直接出結果：有履歷依據的條件、履歷沒提到要面試問的，以及對不上的。不打分數。職缺內容只暫存約 30 分鐘，不交給本人。', 'xxs', c.sub, false),
       option('直接貼上職缺', '104、LinkedIn 那種一大段都可以', 'jobmatch:paste', true),
       option('參考格式', '給你一段欄位範本，改一改貼回來', 'jobmatch:template', false),
       option('一步一步填', '6 個問題，大多用點的', 'jobmatch:steps', false)
@@ -2688,16 +2688,16 @@ function jobMatchConfirmation_(state, cfg, prepared) {
   var must = splitSkills_(f.must, JOBMATCH_MAX_SKILLS_), nice = splitSkills_(f.nice, 6);
   if (must.length) chips('必要', must, true);
   if (nice.length) chips('加分', nice, false);
-  var note = f.salaryMentioned ? '薪資不比對，會直接列為「面談確認」。' : '履歷沒寫的條件會列為「待確認」，不代表不會。';
+  var note = '按「改技能」「改地點」「改年資」調整，或「重貼」換一份職缺。';
   var confirm = { type: 'box', layout: 'vertical', paddingAll: '12px', cornerRadius: '10px', backgroundColor: c.accent,
-    action: { type: 'postback', label: '沒錯，開始比對', data: 'jobmatch:confirm:' + state.id, displayText: '沒錯，開始比對' },
-    contents: [cardText_('沒錯，開始比對', 'sm', '#FFFFFF', true, { align: 'center' })] };
-  var quick = [['沒錯，開始比對', 'jobmatch:confirm:' + state.id], ['改技能', 'jobmatch:edit:must'], ['改地點', 'jobmatch:edit:location'], ['改年資', 'jobmatch:edit:years'], ['重貼', 'jobmatch:restart'], ['取消比對', 'jobmatch:cancel']];
-  return { type: 'flex', altText: '我整理成這樣，對嗎？', quickReply: jobMatchQuickReply_(quick), contents: { type: 'bubble', size: 'mega',
+    action: { type: 'postback', label: '用這些條件重新比對', data: 'jobmatch:confirm:' + state.id, displayText: '重新比對' },
+    contents: [cardText_('用這些條件重新比對', 'sm', '#FFFFFF', true, { align: 'center' })] };
+  var quick = [['重新比對', 'jobmatch:confirm:' + state.id], ['改技能', 'jobmatch:edit:must'], ['改地點', 'jobmatch:edit:location'], ['改年資', 'jobmatch:edit:years'], ['重貼', 'jobmatch:restart'], ['取消比對', 'jobmatch:cancel']];
+  return { type: 'flex', altText: '比對用的條件', quickReply: jobMatchQuickReply_(quick), contents: { type: 'bubble', size: 'mega',
     header: { type: 'box', layout: 'horizontal', paddingAll: '12px', paddingStart: '16px', backgroundColor: c.accent, contents: [
-      cardText_('JOB MATCH', 'xxs', '#FFFFFF', false), cardText_('2 / 2', 'xxs', '#B9C8E6', false, { align: 'end' })
+      cardText_('JOB MATCH', 'xxs', '#FFFFFF', false), cardText_('改條件', 'xxs', '#B9C8E6', false, { align: 'end' })
     ] },
-    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'md', backgroundColor: '#FFFFFF', contents: [cardText_('我整理成這樣，對嗎？', 'md', c.ink, true)].concat(rows, [cardText_(note, 'xxs', c.sub, false)]) },
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'md', backgroundColor: '#FFFFFF', contents: [cardText_('比對用的條件，改好後再比一次', 'md', c.ink, true)].concat(rows, [cardText_(note, 'xxs', c.sub, false)]) },
     footer: { type: 'box', layout: 'vertical', paddingAll: '12px', paddingTop: '0px', spacing: 'xs', backgroundColor: '#FFFFFF', contents: [confirm,
       { type: 'box', layout: 'horizontal', contents: [linkButton_('改技能', 'jobmatch:edit:must'), linkButton_('改地點', 'jobmatch:edit:location'), linkButton_('重貼', 'jobmatch:restart')] }] } } };
 }
@@ -2846,13 +2846,14 @@ function jobMatchResultCard_(state, cfg, prepared) {
       { type: 'box', layout: 'vertical', contents: text }
     ] };
   });
-  var tail = [];
+  var tail = [], f = state.fields, summary = [f.location, f.years, f.education].filter(Boolean).join('・');
+  if (summary) tail.push(cardText_('比對條件：' + summary, 'xxs', c.sub, false));
   if (state.fields.salaryMentioned) tail.push(cardText_('薪資：面談確認。', 'xxs', c.sub, false));
   tail.push(cardText_('「？」代表履歷沒提到，不代表不會；可用下方按鈕整理成面談問題。', 'xxs', c.sub, false));
   var questions = { type: 'box', layout: 'vertical', paddingAll: '12px', cornerRadius: '10px', backgroundColor: c.accent,
     action: { type: 'postback', label: '產生面談問題', data: 'jobmatch:questions:' + state.id, displayText: '產生面談問題' },
     contents: [cardText_('產生面談問題', 'sm', '#FFFFFF', true, { align: 'center' })] };
-  var quick = [['產生面談問題', 'jobmatch:questions:' + state.id], ['留下邀約', 'invite:start'], ['再比一個職缺', 'jobmatch:restart'], ['回名片', 'nav:home']];
+  var quick = [['產生面談問題', 'jobmatch:questions:' + state.id], ['留下邀約', 'invite:start'], ['改條件', 'jobmatch:review'], ['再比一個職缺', 'jobmatch:restart'], ['回名片', 'nav:home']];
   return { type: 'flex', altText: '職缺比對結果：符合 ' + counts.match + '、待確認 ' + counts.unknown + '、不符 ' + counts.mismatch, quickReply: jobMatchQuickReply_(quick), contents: { type: 'bubble', size: 'mega',
     header: { type: 'box', layout: 'vertical', paddingAll: '16px', paddingBottom: '12px', backgroundColor: c.accent, spacing: 'xs', contents: [
       cardText_('JOB MATCH ・ ' + (state.fields.title || '職缺比對'), 'xxs', '#B9C8E6', false),
@@ -2865,7 +2866,7 @@ function jobMatchResultCard_(state, cfg, prepared) {
       { type: 'box', layout: 'vertical', contents: rows }
     ].concat(tail) },
     footer: { type: 'box', layout: 'vertical', paddingAll: '12px', paddingTop: '0px', spacing: 'xs', backgroundColor: '#FFFFFF', contents: [questions,
-      { type: 'box', layout: 'horizontal', contents: [linkButton_('留下邀約', 'invite:start'), linkButton_('再比一個', 'jobmatch:restart'), linkButton_('回名片', 'nav:home')] }] } } };
+      { type: 'box', layout: 'horizontal', contents: [linkButton_('留下邀約', 'invite:start'), linkButton_('改條件', 'jobmatch:review'), linkButton_('再比一個', 'jobmatch:restart')] }] } } };
 }
 
 /** 面談問題由程式從「待確認」「不符」項目組成，不另外呼叫模型、不捏造。 */
@@ -2909,6 +2910,14 @@ function handleJobMatch_(event, text, cfg, prepared) {
       else { state = next || state; state.lastEvent = eventId; state.lastMessages = messages; saveJobMatchState_(key, state); }
       return messages;
     }
+    // 條件整理好就直接比對、直接出結果卡；人資不必先確認清單，結果卡上有「改條件」可回頭調整。
+    function matchAndReply() {
+      startLoading_(event.source.userId, cfg);
+      try { state.results = runJobMatch_(state, cfg, prepared); }
+      catch (error) { safeLog_(errorCode_(error)); state.stage = 'confirm'; return remember([jobMatchText_(ragErrorMessage_(error), [['再試一次', 'jobmatch:confirm:' + state.id], ['改條件', 'jobmatch:review'], ['取消比對', 'jobmatch:cancel']])]); }
+      state.stage = 'done';
+      return remember([jobMatchResultCard_(state, cfg, prepared)]);
+    }
     function handlePaste() {
       if (event.type !== 'message' || !text || /^jobmatch:/.test(text)) return [jobMatchText_('請直接貼上職缺文字。')];
       if (Array.from(text).length > JOBMATCH_MAX_CHARS_) return [jobMatchText_('職缺太長了，請控制在 ' + JOBMATCH_MAX_CHARS_ + ' 字內；可以只貼「條件／要求」那一段。')];
@@ -2919,7 +2928,7 @@ function handleJobMatch_(event, text, cfg, prepared) {
       catch (error) { safeLog_(errorCode_(error)); return [jobMatchText_(ragErrorMessage_(error) + '\n也可以改用「一步一步填」。', [['一步一步填', 'jobmatch:steps'], ['取消比對', 'jobmatch:cancel']])]; }
       state.fields = fields; state.criteria = buildCriteria_(fields);
       if (!state.criteria.length) { state.stage = 'steps'; state.step = 0; state.fields = { title: fields.title }; return remember([jobMatchText_('這段看不出具體條件，我改用問答的方式收集。')].concat(jobMatchStepPrompt_(state))); }
-      state.stage = 'confirm'; return remember([jobMatchConfirmation_(state, cfg, prepared)]);
+      return matchAndReply();
     }
     var ready = prepared && prepared.index && prepared.source && prepared.index.fingerprint === prepared.source.fingerprint;
     if (text === 'jobmatch:cancel' || (state && /^(?:取消|取消比對)$/.test(text))) return remember([jobMatchText_('已取消職缺比對，剛才貼的內容沒有保存。', [['回名片', 'nav:home']])], null);
@@ -2931,15 +2940,16 @@ function handleJobMatch_(event, text, cfg, prepared) {
     }
     if (!state) return null;
     if (!ready || state.fingerprint !== prepared.index.fingerprint) return remember([textMessage_('履歷資料已更新或正在同步，請重新選擇「貼職缺比對」。')], null);
-    if (text === 'jobmatch:paste') { state.stage = 'paste'; return remember([jobMatchText_('請把職缺整段貼上來（' + JOBMATCH_MAX_CHARS_ + ' 字內）。貼完我會先整理成條件清單給你確認。')]); }
+    if (text === 'jobmatch:paste') { state.stage = 'paste'; return remember([jobMatchText_('請把職缺整段貼上來（' + JOBMATCH_MAX_CHARS_ + ' 字內），貼完直接看結果。')]); }
     if (text === 'jobmatch:template') {
       state.stage = 'paste';
       var template = textMessage_(JOBMATCH_TEMPLATE_); delete template.quickReply;
       return remember([template, jobMatchText_('複製上面這段，填好後貼回來；用不到的欄位可以留空或刪掉。')]);
     }
     if (text === 'jobmatch:steps') { state.stage = 'steps'; state.step = 0; state.fields = {}; return remember(jobMatchStepPrompt_(state)); }
+    if (text === 'jobmatch:review' && state.criteria && state.criteria.length) { state.stage = 'confirm'; return remember([jobMatchConfirmation_(state, cfg, prepared)]); }
     var edit = /^jobmatch:edit:(must|location|years)$/.exec(text);
-    if (edit && state.stage === 'confirm') {
+    if (edit && (state.stage === 'confirm' || state.stage === 'done') && state.criteria) {
       state.stage = 'edit'; state.step = JOBMATCH_STEPS_.map(function (s) { return s.key; }).indexOf(edit[1]);
       var prompt = jobMatchStepPrompt_(state); prompt[0].text = prompt[0].text.replace(/^職缺條件 \d+ \/ \d+\n/, '修改：');
       return remember(prompt);
@@ -2953,9 +2963,11 @@ function handleJobMatch_(event, text, cfg, prepared) {
       else value = text;
       state.fields[step.key] = value;
       if (state.stage === 'edit' || state.step === JOBMATCH_STEPS_.length - 1) {
+        var editing = state.stage === 'edit';
         state.criteria = buildCriteria_(state.fields);
         if (!state.criteria.length) { state.stage = 'steps'; state.step = 3; return remember([jobMatchText_('還沒有可以比對的條件，至少填一項必要技能。\n' + JOBMATCH_STEPS_[3].prompt)]); }
-        state.stage = 'confirm'; return remember([jobMatchConfirmation_(state, cfg, prepared)]);
+        if (editing) { state.stage = 'confirm'; return remember([jobMatchConfirmation_(state, cfg, prepared)]); }
+        return matchAndReply();
       }
       state.step++; return remember(jobMatchStepPrompt_(state));
     }
@@ -2965,11 +2977,7 @@ function handleJobMatch_(event, text, cfg, prepared) {
       if (state.id !== confirm[1] || !state.criteria || !state.criteria.length) return [jobMatchText_('這張確認卡已過期，請重新選擇「貼職缺比對」。', [['貼職缺比對', 'jobmatch:start']])];
       if (state.stage === 'done' && state.results) return [jobMatchResultCard_(state, cfg, prepared)];
       if (state.stage !== 'confirm') return [jobMatchConfirmation_(state, cfg, prepared)];
-      startLoading_(event.source.userId, cfg);
-      try { state.results = runJobMatch_(state, cfg, prepared); }
-      catch (error) { safeLog_(errorCode_(error)); return [jobMatchText_(ragErrorMessage_(error), [['再試一次', 'jobmatch:confirm:' + state.id], ['取消比對', 'jobmatch:cancel']])]; }
-      state.stage = 'done';
-      return remember([jobMatchResultCard_(state, cfg, prepared)]);
+      return matchAndReply();
     }
     var questions = /^jobmatch:questions:([a-f0-9]{32})$/.exec(text);
     if (questions) {
