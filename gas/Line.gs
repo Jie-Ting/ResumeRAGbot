@@ -7,9 +7,14 @@
 /**
  * 固定兩個基本入口，加上本次有效的適性主題；不在聊天時重新分類。
  */
+/** 每則訊息底下的快速回覆固定與導覽卡一致，不靠 AI 產生，每次都一樣。 */
+var QUICK_REPLY_ITEMS_ = [
+  ['名片', 'nav:home'], ['個人特質', '個人特質'], ['專業技能', '專業技能'], ['工作經歷', '工作經歷'],
+  ['專案', '專案作品'], ['其他', '其他'], ['貼職缺比對', 'jobmatch:start']
+];
 function quickReply_() {
-  return { items: visibleMenuTopics_().map(function (topic) {
-    return { type: 'action', action: { type: 'postback', label: topic.label, data: 'topic:' + topic.id, displayText: topic.label } };
+  return { items: QUICK_REPLY_ITEMS_.map(function (item) {
+    return { type: 'action', action: { type: 'postback', label: item[0], data: item[1], displayText: item[0] } };
   }) };
 }
 
@@ -200,7 +205,7 @@ function welcomeMessage_(cfg, prepared) {
 function exploreMenu_(cfg, prepared) {
   var home = homeProfile_(cfg, prepared), profile = home.profile, c = CARD_COLORS_;
   var adaptive = prepared && prepared.index && prepared.index.quickTopics && prepared.index.quickTopics.status === 'ready' ? prepared.index.quickTopics.topics || [] : [];
-  var projects = adaptive.filter(function (topic) { return topic.category === '專案' || topic.category === '作品'; }).map(function (topic) { return topic.label; });
+  var projects = adaptive.filter(function (topic) { return topic.category === '專案' || topic.category === '作品'; }).map(function (topic) { return topic.title || topic.label; });
   var items = [
     { icon: 'traits', label: '個人特質', data: '個人特質', hint: (profile.traits || [])[0] || '' },
     { icon: 'skills', label: '專業技能', data: '專業技能', hint: (profile.skills || []).join('、') },

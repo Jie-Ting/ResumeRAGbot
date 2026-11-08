@@ -25,7 +25,7 @@ test('the home page is one business card built only from current public facts, w
   const home=messages[0],json=JSON.stringify(home);assert.equal(home.contents.type,'bubble');assert.equal(home.contents.size,'mega');
   for(const text of ['陳沐言','AI 工程師','青禾應用大學','"text":"muyan.chen@example.invalid"','四年三個月','隨和','台北或新北','Python'])assert(json.includes(text),text);
   assert.equal(home.contents.footer.contents[0].action.data,'nav:explore');assert.equal(home.contents.footer.contents[0].contents[0].text,'想了解這個人');
-  assert.deepEqual([...home.quickReply.items.map(i=>i.action.label)],[...f.gas.visibleMenuTopics_().map(t=>t.label)]);
+  assert.deepEqual([...home.quickReply.items.map(i=>i.action.label)],['名片','個人特質','專業技能','工作經歷','專案','其他','貼職缺比對']);
   assert(!calls.some(c=>c.url.includes('generativelanguage')));
 });
 
@@ -36,7 +36,7 @@ test('the explore menu lists five entries with icon images and hints from the re
   const rows=menu.contents.body.contents.filter(r=>r.type==='box');
   assert.deepEqual(rows.map(r=>r.action.data),['個人特質','專業技能','工作經歷','專案作品','其他']);
   assert.deepEqual(rows.map(r=>r.contents[0].contents[0].url),['traits','skills','experience','projects','more'].map(n=>cfg.iconBaseUrl+n+'.png'));
-  assert.match(JSON.stringify(rows[0]),/隨和、好相處/);assert.match(JSON.stringify(rows[1]),/Python、SQL/);assert.match(JSON.stringify(rows[2]),/四年三個月/);
+  assert.match(JSON.stringify(rows[0]),/隨和、好相處/);assert(!JSON.stringify(rows[3]).includes('：'),'project hints must not carry the category prefix');assert.match(JSON.stringify(rows[1]),/Python、SQL/);assert.match(JSON.stringify(rows[2]),/四年三個月/);
   assert.equal(menu.contents.footer.contents[0].action.data,'nav:home');
   assert(!calls.some(c=>c.url.includes('generativelanguage')));
   const start=f.state.calls.length;f.gas.handleEvent_({...event('','explore-2'),type:'postback',postback:{data:'個人特質'}},cfg);
@@ -111,7 +111,7 @@ test('missing portrait uses a self-contained geometric person and never changes 
 test('home aliases and the menu back link can reopen the business card repeatedly after an existing conversation',()=>{
  const f=withProfile(),idx=f.gas.loadIndex_(f.gas.config_());
  f.gas.saveConversation_('user-1',idx.fingerprint,{question:'先前詢問的作品',focus:idx.imageSources[0].imageKey},[idx.imageSources[0].imageKey],Date.now());
- const cases=['首頁','選單','回首頁','履歷首頁','home','menu','nav:home'];
+ const cases=['首頁','選單','回首頁','履歷首頁','名片','home','menu','nav:home'];
  for(const [i,label] of cases.entries()){
   const before=f.state.calls.length;
   const e=label==='nav:home'?{...event('',String(i)),type:'postback',postback:{data:label}}:event(label,String(i));

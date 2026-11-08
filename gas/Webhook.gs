@@ -136,7 +136,7 @@ function handleEvent_(event, cfg) {
       CacheService.getScriptCache().remove(stickerHistoryKey_(event.source.userId));
       messages = [textMessage_('短期對話記憶已清除，現在可以開始新的問題。')];
     }
-    else if (event.type === 'follow' || /^(選單|首頁|回首頁|履歷首頁|menu|home|開始|nav:home)$/i.test(text)) {
+    else if (event.type === 'follow' || /^(選單|首頁|回首頁|履歷首頁|名片|menu|home|開始|nav:home)$/i.test(text)) {
       messages = [welcomeMessage_(cfg, prepared)];
     }
     else if (/^nav:explore$/i.test(text)) messages = [exploreMenu_(cfg, prepared)];
