@@ -64,7 +64,7 @@ function jobMatchChooser_(cfg, prepared) {
     ] },
     body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'md', backgroundColor: '#FFFFFF', contents: [
       cardText_('把職缺給我，我幫你對照' + home.name + '的履歷', 'md', c.ink, true),
-      cardText_('貼上後直接出結果：有履歷依據的條件、履歷沒提到要面試問的，以及對不上的。不打分數。職缺內容只暫存約 30 分鐘，不交給本人。', 'xxs', c.sub, false),
+      cardText_('貼上後直接出結果：有履歷依據的條件、履歷沒提到要面試問的，以及對不上的。不打分數。職缺內容只暫存約 30 分鐘；除非你留下邀約，不會交給本人。', 'xxs', c.sub, false),
       option('直接貼上職缺', '104、LinkedIn 那種一大段都可以', 'jobmatch:paste', true),
       option('參考格式', '給你一段欄位範本，改一改貼回來', 'jobmatch:template', false),
       option('一步一步填', '6 個問題，大多用點的', 'jobmatch:steps', false)
@@ -476,6 +476,8 @@ function handleJobMatch_(event, text, cfg, prepared) {
       return remember([jobMatchChooser_(cfg, prepared)], { id: sha256_(Utilities.getUuid()).slice(0, 32), stage: 'choose', fields: {}, fingerprint: prepared.index.fingerprint });
     }
     if (!state) return null;
+    // 比對完成後，只有本流程的按鈕才由這裡處理；其他訊息（提問、邀約）照常走原本的路。
+    if (state.stage === 'done' && !/^(?:jobmatch:|產生面談問題$)/.test(text)) return null;
     if (!ready || state.fingerprint !== prepared.index.fingerprint) return remember([textMessage_('履歷資料已更新或正在同步，請重新選擇「貼職缺比對」。')], null);
     var pick = /^jobmatch:pick:(\d)$/.exec(text);
     if (pick && state.jobs && state.jobs[Number(pick[1])]) return pickJob(Number(pick[1]));
