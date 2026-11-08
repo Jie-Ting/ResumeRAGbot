@@ -14,8 +14,13 @@ function fixture(){
   const prior=f.state.response;
   f.state.response=call=>{
     const schema=call.body?.generationConfig?.responseSchema?.properties;
-    if(schema?.must)return candidate({title:'AI 應用工程師',location:'台北市內湖區',years:'3 年以上',education:'資訊相關科系',
-      must:[{label:'Python',category:'技能'},{label:'SQL',category:'技能'},{label:'REST API',category:'經驗'}],nice:[{label:'Google Apps Script',category:'工具'},{label:'資料視覺化',category:'技能'},{label:'不存在的條件',category:'其他'}]});
+    if(schema?.jobs){
+      const jobPosting=JSON.parse(call.body.contents[0].parts[0].text).jobPosting;
+      const ai={title:'AI 應用工程師',location:'台北市內湖區',years:'3 年以上',education:'資訊相關科系',
+        must:[{label:'Python',category:'技能'},{label:'SQL',category:'技能'},{label:'REST API',category:'經驗'}],nice:[{label:'Google Apps Script',category:'工具'},{label:'資料視覺化',category:'技能'},{label:'不存在的條件',category:'其他'}]};
+      const second={title:'前端工程師',location:'高雄',years:'',education:'',must:[{label:'React',category:'技能'}],nice:[]};
+      return candidate({jobs:jobPosting.includes('前端工程師')?[ai,second]:[ai]});
+    }
     if(schema?.results){
       const payload=JSON.parse(call.body.contents[0].parts[0].text);
       const python=payload.evidence.find(e=>e.text.includes('pandas'));
@@ -105,4 +110,18 @@ test('a short paste switches to the step flow and the location/years/education r
   assert.equal(gas.matchEducation_({label:'設計相關科系'},['學校：青禾應用大學。科系：資訊管理學系，學士。'],{}).status,'unknown');
   assert.equal(gas.parseYears_('2-4 年經驗'),2);assert.equal(gas.parseYears_('十年'),10);assert.equal(gas.parseYears_('不限'),null);
   assert.deepEqual([...gas.splitSkills_('Python、SQL, GAS；不限',8)],['Python','SQL','GAS']);
+});
+
+test('several postings in one paste: the visitor picks one, gets its result, and 再比一個 offers the rest',()=>{
+  const f=fixture(),cfg=f.gas.config_();
+  f.gas.handleEvent_(post('jobmatch:start','m1'),cfg);f.gas.handleEvent_(post('jobmatch:paste','m2'),cfg);
+  f.gas.handleEvent_(event(JD+'\n\n【前端工程師】高雄 必備：React','m3'),cfg);
+  const prompt=last(f)[0];assert.match(prompt.text,/我看到 2 個職缺/);assert.match(prompt.text,/2\. 前端工程師/);
+  assert.deepEqual([...prompt.quickReply.items.map(i=>i.action.data).slice(0,2)],['jobmatch:pick:0','jobmatch:pick:1']);
+  f.gas.handleEvent_(post('jobmatch:pick:1','m4'),cfg);
+  const result=last(f)[0];assert.match(JSON.stringify(result.contents.header),/前端工程師/);assert.match(result.altText,/不符 1/);
+  const rows=result.contents.body.contents[4].contents.map(r=>JSON.stringify(r));assert.match(rows.find(r=>r.includes('"高雄"')),/地點不符：/);
+  f.gas.handleEvent_(post('jobmatch:restart','m5'),cfg);
+  const again=last(f)[0];assert.match(again.text,/2\. 前端工程師（已比對）/);
+  f.gas.handleEvent_(event('1','m6'),cfg);assert.match(JSON.stringify(last(f)[0].contents.header),/AI 應用工程師/);
 });
