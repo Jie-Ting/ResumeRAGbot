@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {event} from './harness.mjs';
+import {event,assertFlexSane} from './harness.mjs';
 import {portfolioFixture,paragraph,candidate} from './portfolio-fixture.mjs';
 
 const JD='【AI 應用工程師】台北市內湖區\n年資 3 年以上，資訊相關科系\n必備：Python、SQL、REST API 串接經驗\n加分：Google Apps Script、資料視覺化\n月薪 55,000～75,000，混合辦公\n'+'工作內容：'.padEnd(820,'負責內部工具開發與維護。');
@@ -34,7 +34,7 @@ function fixture(){
   return f;
 }
 const post=(data,id)=>({...event('',id),type:'postback',postback:{data}});
-const last=f=>f.state.calls.filter(c=>c.url.endsWith('/message/reply')).at(-1).body.messages;
+const last=f=>{const m=f.state.calls.filter(c=>c.url.endsWith('/message/reply')).at(-1).body.messages;assertFlexSane(m);return m;};
 
 test('paste flow: chooser → paste → result card straight away, with a review card to adjust conditions',()=>{
   const f=fixture(),cfg=f.gas.config_(),writes=f.state.documentWrites;

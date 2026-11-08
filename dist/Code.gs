@@ -2705,9 +2705,11 @@ function jobMatchPickPrompt_(state) {
 /** 條件確認卡：人資看一眼、按確認才比對；每項都能單獨改。 */
 function jobMatchConfirmation_(state, cfg, prepared) {
   var c = CARD_COLORS_, f = state.fields, rows = [];
-  function row(label, value) { rows.push({ type: 'box', layout: 'horizontal', spacing: 'md', contents: [cardText_(label, 'xxs', c.accent, false, { flex: 0, width: '40px' }), cardText_(value, 'sm', c.ink, false)] }); }
+  // LINE 的 text 元件沒有 width，固定欄寬要用 box 包。
+  function key(label) { return { type: 'box', layout: 'vertical', width: '40px', flex: 0, contents: [cardText_(label, 'xxs', c.accent, false)] }; }
+  function row(label, value) { rows.push({ type: 'box', layout: 'horizontal', spacing: 'md', contents: [key(label), cardText_(value, 'sm', c.ink, false)] }); }
   function chips(label, values, solid) {
-    rows.push({ type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'flex-start', contents: [cardText_(label, 'xxs', c.accent, false, { flex: 0, width: '40px' }),
+    rows.push({ type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'flex-start', contents: [key(label),
       { type: 'box', layout: 'vertical', spacing: 'xs', contents: values.map(function (value) {
         return { type: 'box', layout: 'vertical', paddingAll: '5px', paddingStart: '9px', paddingEnd: '9px', cornerRadius: '12px',
           backgroundColor: solid ? c.accent : '#FFFFFF', borderWidth: solid ? '0px' : '1px', borderColor: c.accent,
@@ -2874,9 +2876,9 @@ function jobMatchResultCard_(state, cfg, prepared) {
     var detail = item.quote ? '「' + Array.from(item.quote).slice(0, 26).join('') + (Array.from(item.quote).length > 26 ? '…' : '') + '」' : item.note;
     // 每列先寫「地點符合：」「技能待確認：」這類分類＋結果，再接條件本身；加分條件另標。
     var prefix = (JOBMATCH_KIND_LABELS_[item.kind] || item.kind) + JOBMATCH_STATUS_LABELS_[item.status] + '：';
-    var text = [{ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
-      { type: 'text', size: 'sm', wrap: true, contents: [{ type: 'span', text: prefix, color: color, weight: 'bold' }, { type: 'span', text: item.label, color: c.ink, weight: 'bold' }] },
-      cardText_(item.required ? '' : '加分', 'xxs', c.sub, false, { flex: 0, gravity: 'center' })] }];
+    var headline = [{ type: 'text', size: 'sm', wrap: true, contents: [{ type: 'span', text: prefix, color: color, weight: 'bold' }, { type: 'span', text: item.label, color: c.ink, weight: 'bold' }] }];
+    if (!item.required) headline.push(cardText_('加分', 'xxs', c.sub, false, { flex: 0, gravity: 'center' })); // LINE 不接受空字串 text
+    var text = [{ type: 'box', layout: 'horizontal', spacing: 'sm', contents: headline }];
     if (detail) text.push(cardText_(detail, 'xxs', c.sub, false));
     if (item.quote && item.note && item.status !== 'match') text.push(cardText_(item.note, 'xxs', color, false));
     return { type: 'box', layout: 'horizontal', spacing: 'md', paddingTop: i ? '8px' : '0px', alignItems: 'flex-start', contents: [

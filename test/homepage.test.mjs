@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGas,event} from './harness.mjs';
+import {createGas,event,assertFlexSane} from './harness.mjs';
 import {portfolioFixture,paragraph,picture} from './portfolio-fixture.mjs';
 
 function withProfile(){
@@ -22,7 +22,7 @@ test('the home page is one business card built only from current public facts, w
   f.gas.handleEvent_(event('首頁','home'),f.gas.config_());
   const calls=f.state.calls.slice(before),messages=calls.find(c=>c.url.endsWith('/message/reply')).body.messages;
   assert.equal(messages.length,1,'homepage should not add an oversized greeting sticker');
-  const home=messages[0],json=JSON.stringify(home);assert.equal(home.contents.type,'bubble');assert.equal(home.contents.size,'mega');
+  const home=messages[0],json=JSON.stringify(home);assertFlexSane(messages);assert.equal(home.contents.type,'bubble');assert.equal(home.contents.size,'mega');
   for(const text of ['陳沐言','AI 工程師','青禾應用大學','"text":"muyan.chen@example.invalid"','四年三個月','隨和','台北或新北','Python'])assert(json.includes(text),text);
   assert.equal(home.contents.footer.contents[0].action.data,'nav:explore');assert.equal(home.contents.footer.contents[0].contents[0].text,'想了解這個人');
   assert.deepEqual([...home.quickReply.items.map(i=>i.action.label)],['名片','個人特質','專業技能','工作經歷','專案','其他','貼職缺比對']);
@@ -32,7 +32,7 @@ test('the home page is one business card built only from current public facts, w
 test('the explore menu lists five entries with icon images and hints from the resume, and each entry routes to resume Q&A',()=>{
   const f=withProfile(),cfg=f.gas.config_(),before=f.state.calls.length;
   f.gas.handleEvent_({...event('','explore'),type:'postback',postback:{data:'nav:explore'}},cfg);
-  const calls=f.state.calls.slice(before),menu=calls.find(c=>c.url.endsWith('/message/reply')).body.messages[0];
+  const calls=f.state.calls.slice(before),menu=calls.find(c=>c.url.endsWith('/message/reply')).body.messages[0];assertFlexSane(menu);
   const rows=menu.contents.body.contents.filter(r=>r.type==='box');
   assert.deepEqual(rows.map(r=>r.action.data),['個人特質','專業技能','工作經歷','專案作品','其他']);
   assert.deepEqual(rows.map(r=>r.contents[0].contents[0].url),['traits','skills','experience','projects','more'].map(n=>cfg.iconBaseUrl+n+'.png'));
