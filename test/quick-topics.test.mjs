@@ -9,7 +9,7 @@ test('the two essential entries are always visible and the homepage uses their e
   const {gas,state}=createGas();gas.handleEvent_(event('選單','no-index'),gas.config_());
   const welcome=state.calls.find(c=>c.url.endsWith('/message/reply')).body.messages[0];
   assert.deepEqual(welcome.quickReply.items.map(i=>i.action.label),['我是誰','快速一覽']);
-  assert.deepEqual(welcome.contents.contents[2].body.contents.slice(2).flatMap(row=>row.contents.map(b=>b.action.label)),['我是誰','快速一覽']);
+  assert.equal(welcome.contents.footer.contents[0].action.data,'nav:explore');
 });
 
 test('intro and overview each reset work memory but use different source and answer-format scopes',()=>{

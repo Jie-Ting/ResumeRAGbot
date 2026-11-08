@@ -113,56 +113,116 @@ function friendlyAvatar_() {
   ] };
 }
 
+/** 名片與導覽卡共用的色票；LINE 卡片顏色只能寫死，不跟隨深淺色模式。 */
+var CARD_COLORS_ = { ink: '#1B2233', sub: '#5B6475', rule: '#E6E9EF', accent: '#2F4F8F', soft: '#EAF0FA', chip: '#F3F5F9', chevron: '#B8C0D0' };
+
 /**
- * 首頁與 Quick Reply 沿用相同順序：我是誰、快速一覽、同步產生的適性主題。
+ * 讀取目前公開履歷的名片資料。新舊索引不符時回空物件，不把已從文件刪掉的個資繼續顯示。
  */
-function welcomeMessage_(cfg, prepared) {
-  var buttons = visibleMenuTopics_(), profile = {}, portrait = null;
-  // 新舊索引不符時，不能把已從文件刪掉的個資繼續顯示在首頁。
+function homeProfile_(cfg, prepared) {
+  var profile = {}, portrait = null;
   if (prepared && prepared.index && prepared.source && prepared.index.fingerprint === prepared.source.fingerprint) {
     profile = validateHomeProfile_(prepared.index.quickTopics && prepared.index.quickTopics.homeProfile, prepared.index.chunks);
     try { portrait = portfolioEntries_(prepared.index, prepared.source, cfg, null, 'portrait')[0]; } catch (_) {}
   }
-  var name = profile.name || cfg.name, role = profile.role || '歡迎認識我的經歷與作品';
-  function text(value, size, color, bold) {
-    return { type: 'text', text: value, size: size, color: color, weight: bold ? 'bold' : 'regular', wrap: true };
-  }
-  function action(topic) { return { type: 'postback', label: topic.label, data: 'topic:' + topic.id, displayText: topic.label }; }
-  function card(number, title, contents, footer) {
-    return { type: 'bubble', size: 'kilo', header: { type: 'box', layout: 'horizontal', paddingAll: '16px', backgroundColor: '#143D35', contents: [
-      text(title, 'xs', '#FFFFFF', true), { type: 'text', text: number + ' / 03', align: 'end', size: 'xxs', color: '#B7D8C9', flex: 0 }
-    ] }, body: { type: 'box', layout: 'vertical', paddingAll: '18px', spacing: 'md', height: '300px', backgroundColor: '#FAFBF8', contents: contents },
-      footer: { type: 'box', layout: 'vertical', paddingAll: '12px', backgroundColor: '#FAFBF8', contents: footer } };
-  }
-  var identity = [portrait ? { type: 'box', layout: 'vertical', width: '80px', height: '80px', cornerRadius: '40px', alignItems: 'center', contents: [
-    { type: 'image', url: portrait.imageUrl, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' }
-  ] } : friendlyAvatar_(), text(Array.from(name).slice(0,24).join(''), 'lg', '#143D35', true), text(role, 'xs', '#53635E', false)];
-  var contacts = profile.contacts || [];
-  identity.push({ type: 'separator', color: '#DDE6DF', margin: 'md' });
+  return { profile: profile, portrait: portrait, name: profile.name || cfg.name };
+}
+
+function cardText_(value, size, color, bold, extra) {
+  var text = { type: 'text', text: value, size: size, color: color, weight: bold ? 'bold' : 'regular', wrap: true };
+  Object.keys(extra || {}).forEach(function (key) { text[key] = extra[key]; });
+  return text;
+}
+
+function linkButton_(label, data) {
+  return { type: 'button', height: 'sm', style: 'link', color: CARD_COLORS_.accent, action: { type: 'postback', label: label, data: data, displayText: label } };
+}
+
+/**
+ * 【首頁＝一張名片】人資加入好友或輸入「首頁」時先看到：照片、姓名、職務、學校、三個標籤、公開聯繫方式，
+ * 以及「想了解這個人」入口。所有文字都來自同步時逐字摘錄的 homeProfile，履歷沒寫的欄位整列不顯示。
+ */
+function welcomeMessage_(cfg, prepared) {
+  var home = homeProfile_(cfg, prepared), profile = home.profile, c = CARD_COLORS_;
+  var name = Array.from(home.name).slice(0, 24).join(''), role = profile.role || '歡迎認識我的經歷與作品';
+  var who = [cardText_(name, 'lg', c.ink, true), cardText_(role, 'xs', c.sub, false)];
+  if (profile.school) who.push(cardText_(profile.school, 'xxs', c.sub, false));
+  var identity = { type: 'box', layout: 'horizontal', spacing: 'lg', alignItems: 'center', contents: [
+    home.portrait ? { type: 'box', layout: 'vertical', width: '68px', height: '68px', cornerRadius: '34px', flex: 0, contents: [
+      { type: 'image', url: home.portrait.imageUrl, size: 'full', aspectRatio: '1:1', aspectMode: 'cover' }
+    ] } : friendlyAvatar_(),
+    { type: 'box', layout: 'vertical', spacing: 'xs', contents: who }
+  ] };
+  var body = [identity];
+  // 三個標籤各佔三分之一寬，值太長會在標籤內換行，不會撐破卡片。
+  var tags = profile.tags || {}, chips = [['個性', tags.personality], ['地區', tags.region], ['專長', tags.specialty]]
+    .filter(function (pair) { return pair[1]; }).map(function (pair) {
+      return { type: 'box', layout: 'vertical', flex: 1, paddingAll: '8px', cornerRadius: '10px', backgroundColor: c.chip, contents: [
+        cardText_(pair[0], 'xxs', c.accent, false), cardText_(pair[1], 'xs', c.ink, true)
+      ] };
+    });
+  if (chips.length) body.push({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: chips });
+  var facts = [];
   // 聯繫資料逐字顯示，避免把範例地址變成貌似可用的寄信按鈕。
-  (contacts.length ? contacts : ['尚未提供公開聯繫方式']).forEach(function (contact) { identity.push(text(contact, 'xxs', '#53635E', false)); });
-  var traits = [text('一起工作時的我', 'lg', '#143D35', true)];
-  (profile.traits && profile.traits.length ? profile.traits : ['可以先從經歷與作品認識我。']).forEach(function (trait, i) {
-    traits.push({ type: 'box', layout: 'horizontal', spacing: 'md', margin: 'md', contents: [
-      { type: 'text', text: '0' + (i + 1), size: 'xs', color: '#A18150', flex: 0 }, text(trait, 'sm', '#31483D', false)
-    ] });
-  });
-  var navigation = [text('從這裡開始', 'lg', '#143D35', true), text('先認識我，再探索你感興趣的領域。', 'xs', '#687770', false)];
-  // 與 Quick Reply 完全同源、同序；2 欄最多 3 列，長標籤可換行。
-  for (var i = 0; i < buttons.length; i += 2) {
-    navigation.push({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: buttons.slice(i, i + 2).map(function (topic) {
-      return { type: 'box', layout: 'vertical', flex: 1, height: '55px', paddingAll: '8px', cornerRadius: '10px',
-        backgroundColor: topic.kind === 'adaptive' ? '#E8EFE9' : '#23735B', justifyContent: 'center', action: action(topic), contents: [
-          { type: 'text', text: topic.label, size: 'xs', align: 'center', color: topic.kind === 'adaptive' ? '#143D35' : '#FFFFFF', weight: 'bold', wrap: true }
-        ] };
+  (profile.contacts || []).forEach(function (contact) { facts.push(['聯繫', contact]); });
+  if (profile.years) facts.push(['年資', profile.years]);
+  if (facts.length) {
+    body.push({ type: 'separator', color: c.rule });
+    body.push({ type: 'box', layout: 'vertical', spacing: 'xs', contents: facts.map(function (pair) {
+      return { type: 'box', layout: 'horizontal', spacing: 'md', contents: [
+        cardText_(pair[0], 'xxs', c.accent, false, { flex: 0 }), cardText_(pair[1], 'xxs', c.sub, false)
+      ] };
     }) });
   }
-  var compactButton = function (topic) { return { type: 'button', height: 'sm', style: 'link', color: '#23735B', action: action(topic) }; };
-  return { type: 'flex', altText: Array.from(name).slice(0,50).join('') + '｜認識我・個人特質・履歷導覽', quickReply: quickReply_(), contents: { type: 'carousel', contents: [
-    card('01', 'HELLO / 認識我', identity, [contactButton_('聯繫本人', 'nav:contact')]),
-    card('02', 'ABOUT / 個人特質', traits, [compactButton(buttons[1])]),
-    card('03', 'EXPLORE / 履歷導覽', navigation, [{ type: 'button', height: 'sm', style: 'link', color: '#23735B', action: { type: 'postback', label: '回首頁', data: 'nav:home', displayText: '首頁' } }])
-  ] } };
+  var explore = { type: 'button', height: 'sm', style: 'primary', color: c.accent,
+    action: { type: 'postback', label: '想了解這個人', data: 'nav:explore', displayText: '想了解這個人' } };
+  return { type: 'flex', altText: name + '｜履歷名片', quickReply: quickReply_(), contents: { type: 'bubble', size: 'mega',
+    header: { type: 'box', layout: 'horizontal', paddingAll: '12px', paddingStart: '16px', backgroundColor: c.accent, contents: [
+      cardText_('RESUME CARD', 'xxs', '#FFFFFF', false), cardText_('LINE 履歷', 'xxs', '#B9C8E6', false, { align: 'end' })
+    ] },
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'lg', backgroundColor: '#FFFFFF', contents: body },
+    footer: { type: 'box', layout: 'vertical', paddingAll: '12px', paddingTop: '0px', spacing: 'xs', backgroundColor: '#FFFFFF', contents: [
+      explore, { type: 'box', layout: 'horizontal', contents: [linkButton_('聯繫本人', 'nav:contact'), linkButton_('使用說明', '使用說明')] }
+    ] } } };
+}
+
+/**
+ * 【導覽卡】按下「想了解這個人」後的五個入口：個人特質、專業技能、工作經歷、專案、其他。
+ * 每項下方一行提示取自 homeProfile 與同步產生的主題，履歷沒有的就不顯示提示；點下去走原本的履歷問答。
+ */
+function exploreMenu_(cfg, prepared) {
+  var home = homeProfile_(cfg, prepared), profile = home.profile, c = CARD_COLORS_;
+  var adaptive = prepared && prepared.index && prepared.index.quickTopics && prepared.index.quickTopics.status === 'ready' ? prepared.index.quickTopics.topics || [] : [];
+  var projects = adaptive.filter(function (topic) { return topic.category === '專案' || topic.category === '作品'; }).map(function (topic) { return topic.label; });
+  var items = [
+    { icon: 'traits', label: '個人特質', data: '個人特質', hint: (profile.traits || [])[0] || '' },
+    { icon: 'skills', label: '專業技能', data: '專業技能', hint: (profile.skills || []).join('、') },
+    { icon: 'experience', label: '工作經歷', data: '工作經歷', hint: profile.years ? profile.years + '的經驗' : '' },
+    { icon: 'projects', label: '專案', data: '專案作品', hint: projects.join('、') },
+    { icon: 'more', label: '其他', data: '其他', hint: '學歷、語言、證照，或直接提問' }
+  ];
+  var rows = [];
+  items.forEach(function (item, i) {
+    if (i) rows.push({ type: 'separator', color: c.rule });
+    var text = [cardText_(item.label, 'sm', c.ink, true)];
+    if (item.hint) text.push(cardText_(Array.from(item.hint).slice(0, 40).join(''), 'xxs', c.sub, false, { maxLines: 1 }));
+    rows.push({ type: 'box', layout: 'horizontal', spacing: 'md', paddingTop: '10px', paddingBottom: '10px', alignItems: 'center',
+      action: { type: 'postback', label: item.label, data: item.data, displayText: item.label }, contents: [
+        { type: 'box', layout: 'vertical', width: '36px', height: '36px', cornerRadius: '10px', backgroundColor: c.soft, flex: 0, justifyContent: 'center', alignItems: 'center', contents: [
+          { type: 'image', url: cfg.iconBaseUrl + item.icon + '.png', size: '20px', aspectRatio: '1:1' }
+        ] },
+        { type: 'box', layout: 'vertical', spacing: 'none', contents: text },
+        cardText_('›', 'md', c.chevron, false, { flex: 0 })
+      ] });
+  });
+  return { type: 'flex', altText: '想先了解' + home.name + '的哪一面？', quickReply: quickReply_(), contents: { type: 'bubble', size: 'mega',
+    header: { type: 'box', layout: 'vertical', paddingAll: '16px', paddingBottom: '6px', backgroundColor: '#FFFFFF', contents: [
+      cardText_('EXPLORE', 'xxs', c.accent, false), cardText_('想先了解' + Array.from(home.name).slice(0, 20).join('') + '的哪一面？', 'md', c.ink, true)
+    ] },
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', paddingTop: '0px', backgroundColor: '#FFFFFF', contents: rows },
+    footer: { type: 'box', layout: 'horizontal', paddingAll: '8px', backgroundColor: '#FFFFFF', contents: [
+      linkButton_('回名片', 'nav:home'), linkButton_('貼職缺比對', 'jobmatch:start')
+    ] } } };
 }
 
 /**
