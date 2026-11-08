@@ -121,16 +121,18 @@ function validateHomeProfile_(value, chunks) {
     var key = phrase.replace(/[，。、；;\s]/g, '');
     if (!traits.some(function (item) { var other = item.replace(/[，。、；;\s]/g, ''); return other.indexOf(key) >= 0 || key.indexOf(other) >= 0; })) traits.push(phrase);
   });
-  var tags = value.tags || {};
-  // 名片三個標籤各 6 字內：個性只採主人自己寫的句子，不由模型下定論；地區與專長同樣逐字摘錄。
-  var personality = exact(tags.personality, 6) || labeled(/^(?:個性|特質)[：:]\s*(.+)$/, 6);
-  var regionTag = exact(tags.region, 6) || labeled(/^(?:工作偏好|工作地點|地區|所在地|居住地)[：:]\s*(.+)$/, 6);
-  var specialty = exact(tags.specialty, 6);
-  return { version: 2, name: exact(value.name, 24), role: exact(value.role, 44),
+  var tags = value.tags || {}, skills = list(value.skills, 14, 4);
+  // 名片三個標籤各 8 字內：個性只採主人自己寫的句子，不由模型下定論；地區與專長同樣逐字摘錄。
+  var personality = exact(tags.personality, 8) || labeled(/^(?:個性|特質)[：:]\s*(.+)$/, 8);
+  var regionTag = exact(tags.region, 8) || labeled(/^(?:工作偏好|工作地點|地區|所在地|居住地)[：:]\s*(.+)$/, 8);
+  // 「台北或新北地區」這類寫法先去掉尾端的「地區」，仍是原文的連續片段。
+  regionTag = exact(regionTag.replace(/地區$/, ''), 8) || regionTag;
+  var specialty = exact(tags.specialty, 8) || (skills[0] && Array.from(skills[0]).length <= 8 ? skills[0] : '');
+  return { version: 3, name: exact(value.name, 24), role: exact(value.role, 44),
     traits: traits, contacts: list(value.contacts, 100, 2),
     school: exact(value.school, 30) || labeled(/^(?:學校|畢業學校|學歷)[：:]\s*(.+)$/, 30),
     years: exact(value.years, 12),
-    skills: list(value.skills, 14, 4),
+    skills: skills,
     tags: { personality: personality, region: regionTag, specialty: specialty } };
 }
 
@@ -157,7 +159,7 @@ function buildQuickTopics_(chunks, cfg, fingerprint) {
     '若全部都只是基本資料，topics 可為空陣列；不要為湊數編造專長。具體專案、工作成果或作品存在時，應產生至少一個適性主題。',
     'scope 用一句話界定該類回答範圍，清楚排除其他類別。若職涯背景來源也提到別類專案，不要在背景類重複展開該專案成果。',
     '同時擷取 homeProfile：name 姓名最多24字、role 職務定位最多44字、traits 2至3句特質或工作方式每句最多38字、contacts 最多2項公開Email/電話/網站，每項最多100字。所有欄位必須逐字摘錄公開正文中連續的原文，不改寫、不添加形容詞、不猜測。沒有就用空字串或空陣列。不要從圖片辨識的外觀推測性格或身分。肖像照片歸基本資料，不是作品主題。',
-    '另擷取名片欄位：school 畢業學校最多30字；years 年資或經驗長度最多12字（例如「四年三個月」）；skills 最多4個工具或技術名稱，每項最多14字；tags 三個 6 字內的短標籤：personality 只能取履歷明確以「個性」或「特質」自述的詞，沒有就空字串，不可從內容歸納；region 工作地區或所在地；specialty 最能代表的一項專長。每個欄位同樣必須是公開正文中連續的原文片段。',
+    '另擷取名片欄位：school 畢業學校最多30字；years 年資或經驗長度最多12字（例如「四年三個月」）；skills 最多4個工具或技術名稱，每項最多14字；tags 三個 8 字內的短標籤：personality 只能取履歷明確以「個性」或「特質」自述的詞，沒有就空字串，不可從內容歸納；region 工作地區或所在地；specialty 最能代表的一項專長。每個欄位同樣必須是公開正文中連續的原文片段。',
     '不要將操作指令（作品圖庫、清除對話、使用說明）當成履歷主題。只輸出 JSON。'
   ].join('\n');
   var request = { systemInstruction: { parts: [{ text: instructions }] },

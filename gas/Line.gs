@@ -163,8 +163,13 @@ function welcomeMessage_(cfg, prepared) {
     });
   if (chips.length) body.push({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: chips });
   var facts = [];
-  // 聯繫資料逐字顯示，避免把範例地址變成貌似可用的寄信按鈕。
-  (profile.contacts || []).forEach(function (contact) { facts.push(['聯繫', contact]); });
+  // 聯繫資料逐字顯示，避免把範例地址變成貌似可用的寄信按鈕；只去掉「Email：」這類前綴與句尾標點，標籤改用偵測到的類型。
+  (profile.contacts || []).forEach(function (contact) {
+    var match = String(contact).match(/^(?:示範\s*)?(E-?mail|信箱|電子郵件|電話|手機|網站|作品集|GitHub|LinkedIn|個人網站)\s*[：:]\s*(.+)$/i);
+    var label = match ? match[1].replace(/^e-?mail$/i, 'Email').replace(/^(信箱|電子郵件)$/, 'Email').replace(/^(手機)$/, '電話').replace(/^(作品集|個人網站)$/, '網站') : '聯繫';
+    var value = (match ? match[2] : String(contact)).replace(/[。；;，,\s]+$/, '');
+    if (value) facts.push([label, value]);
+  });
   if (profile.years) facts.push(['年資', profile.years]);
   if (facts.length) {
     body.push({ type: 'separator', color: c.rule });
@@ -174,8 +179,10 @@ function welcomeMessage_(cfg, prepared) {
       ] };
     }) });
   }
-  var explore = { type: 'button', height: 'sm', style: 'primary', color: c.accent,
-    action: { type: 'postback', label: '想了解這個人', data: 'nav:explore', displayText: '想了解這個人' } };
+  // 主要入口用色塊而非 button 元件：LINE 電腦版對自訂顏色的 primary 按鈕有時不顯示文字。
+  var explore = { type: 'box', layout: 'vertical', paddingAll: '12px', cornerRadius: '10px', backgroundColor: c.accent, justifyContent: 'center',
+    action: { type: 'postback', label: '想了解這個人', data: 'nav:explore', displayText: '想了解這個人' },
+    contents: [cardText_('想了解這個人', 'sm', '#FFFFFF', true, { align: 'center' })] };
   return { type: 'flex', altText: name + '｜履歷名片', quickReply: quickReply_(), contents: { type: 'bubble', size: 'mega',
     header: { type: 'box', layout: 'horizontal', paddingAll: '12px', paddingStart: '16px', backgroundColor: c.accent, contents: [
       cardText_('RESUME CARD', 'xxs', '#FFFFFF', false), cardText_('LINE 履歷', 'xxs', '#B9C8E6', false, { align: 'end' })

@@ -9,7 +9,7 @@ function withProfile(){
     paragraph('學校：青禾應用大學。具備四年三個月的經驗。工作偏好：台北或新北地區。主要使用 Python、SQL。'));
   f.gas.syncKnowledgeBase();
   const idx=f.gas.loadIndex_(f.gas.config_());
-  idx.quickTopics.homeProfile={version:2,name:'陳沐言',role:'AI 工程師',traits:['隨和、好相處','先做小範圍原型'],contacts:['muyan.chen@example.invalid'],
+  idx.quickTopics.homeProfile={version:3,name:'陳沐言',role:'AI 工程師',traits:['隨和、好相處','先做小範圍原型'],contacts:['muyan.chen@example.invalid'],
     school:'青禾應用大學',years:'四年三個月',skills:['Python','SQL'],tags:{personality:'隨和',region:'台北或新北',specialty:'Python'}};
   f.state.files.get(f.state.properties.get('INDEX_FILE_ID')).content=JSON.stringify(idx);
   return f;
@@ -17,12 +17,14 @@ function withProfile(){
 
 test('the home page is one business card built only from current public facts, with the explore entry and quick replies, without AI calls',()=>{
   const f=withProfile(),before=f.state.calls.length;
+  const idx=f.gas.loadIndex_(f.gas.config_());idx.quickTopics.homeProfile.contacts=['Email：muyan.chen@example.invalid。'];
+  f.state.files.get(f.state.properties.get('INDEX_FILE_ID')).content=JSON.stringify(idx);
   f.gas.handleEvent_(event('首頁','home'),f.gas.config_());
   const calls=f.state.calls.slice(before),messages=calls.find(c=>c.url.endsWith('/message/reply')).body.messages;
   assert.equal(messages.length,1,'homepage should not add an oversized greeting sticker');
   const home=messages[0],json=JSON.stringify(home);assert.equal(home.contents.type,'bubble');assert.equal(home.contents.size,'mega');
-  for(const text of ['陳沐言','AI 工程師','青禾應用大學','muyan.chen@example.invalid','四年三個月','隨和','台北或新北','Python'])assert(json.includes(text),text);
-  assert.equal(home.contents.footer.contents[0].action.data,'nav:explore');
+  for(const text of ['陳沐言','AI 工程師','青禾應用大學','"text":"muyan.chen@example.invalid"','四年三個月','隨和','台北或新北','Python'])assert(json.includes(text),text);
+  assert.equal(home.contents.footer.contents[0].action.data,'nav:explore');assert.equal(home.contents.footer.contents[0].contents[0].text,'想了解這個人');
   assert.deepEqual([...home.quickReply.items.map(i=>i.action.label)],[...f.gas.visibleMenuTopics_().map(t=>t.label)]);
   assert(!calls.some(c=>c.url.includes('generativelanguage')));
 });
@@ -45,10 +47,11 @@ test('business card fields are only accepted when they are literal public text a
   const {gas}=createGas();
   const p=gas.validateHomeProfile_({school:'假的大學',years:'四年三個月',skills:['Python','不存在的工具'],tags:{personality:'積極熱情',region:'台北或新北',specialty:'自動化'}},
     [{text:'學校：青禾應用大學。\n具備四年三個月的經驗。\n工作偏好：台北或新北地區。\n擅長 Python 與自動化。'},{imageKey:'ocr',text:'積極熱情 假的大學'}]);
-  assert.equal(p.version,2);assert.equal(p.school,'青禾應用大學');assert.equal(p.years,'四年三個月');assert.deepEqual([...p.skills],['Python']);
+  assert.equal(p.version,3);assert.equal(p.school,'青禾應用大學');assert.equal(p.years,'四年三個月');assert.deepEqual([...p.skills],['Python']);
   assert.deepEqual({...p.tags},{personality:'',region:'台北或新北',specialty:'自動化'});
-  const q=gas.validateHomeProfile_({},[{text:'個性：隨和、好相處。\n學歷：國立測試大學 資訊系，學士。'}]);
+  const q=gas.validateHomeProfile_({skills:['Python']},[{text:'個性：隨和、好相處。\n學歷：國立測試大學 資訊系，學士。\n工作偏好：台北或新北地區，可接受混合辦公。\n主要使用 Python。'}]);
   assert.equal(q.tags.personality,'隨和、好相處');assert.equal(q.school,'國立測試大學 資訊系，學士');
+  assert.equal(q.tags.region,'台北或新北');assert.equal(q.tags.specialty,'Python');
 });
 
 test('homepage does not repeat deleted data or extract traits from OCR',()=>{
