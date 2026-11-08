@@ -130,6 +130,7 @@ function handleEvent_(event, cfg) {
       } catch (_) { MESSAGE_TOPICS_ = []; }
     }
     if (!cfg.enabled) messages = [textMessage_('履歷助理目前暫停服務，請稍後再試。')];
+    else if ((messages = handleJobMatch_(event, text, cfg, prepared))) { /* 職缺比對有自己的流程，長職缺不受 800 字限制。 */ }
     else if ((messages = handleContact_(event, text, cfg, prepared))) { /* 聯繫與邀約不經 RAG。 */ }
     else if (/^(清除對話|重新開始|reset)$/i.test(text)) {
       clearConversation_(event.source.userId);
@@ -140,7 +141,6 @@ function handleEvent_(event, cfg) {
       messages = [welcomeMessage_(cfg, prepared)];
     }
     else if (/^nav:explore$/i.test(text)) messages = [exploreMenu_(cfg, prepared)];
-    else if (/^jobmatch:start$/i.test(text)) messages = [textMessage_('職缺比對功能製作中。可以先從「想了解這個人」的五個入口認識履歷，或直接提問。')];
     else if (/^(使用說明|說明|help)$/i.test(text)) messages = [textMessage_(helpText_())];
     else if (/^(隱私|privacy)$/i.test(text)) messages = [textMessage_(privacyText_())];
     else if (event.type === 'postback' && text.indexOf('evidence:') === 0) {
