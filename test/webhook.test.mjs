@@ -100,7 +100,7 @@ test('one invalid event does not suppress other events in a batch', () => {
   const invalid = { ...event(), webhookEventId: 123, replyToken: 'invalid' };
   gas.doPost(input([invalid, event('使用說明', 'event-2'), event('隱私', 'event-3')]));
   assert.equal(state.calls.length, 2);
-  assert.match(state.calls[0].body.messages[0].text, /短期記憶/);
+  assert.match(state.calls[0].body.messages[0].text, /清除對話/);
   assert.match(state.calls[1].body.messages[0].text, /資料使用方式/);
 });
 

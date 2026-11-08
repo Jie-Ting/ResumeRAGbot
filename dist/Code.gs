@@ -2074,7 +2074,13 @@ function exploreMenu_(cfg, prepared) {
  * 訪客輸入「使用說明」時顯示的操作方法。
  */
 function helpText_() {
-  return '輸入「聯繫本人」「想約面試」或「想合作」，可查看 Email 或留下邀約。\n\n人資可按「貼職缺比對」：貼上職缺後直接逐項對照履歷，列出有依據、待確認與不符的條件；結果卡可按「改條件」調整再比一次。\n\n你可以直接提問，例如：\n• 請用 30 秒介紹這位求職者。\n• 有哪些工作經歷與具體成果？\n• 做過哪些與資料分析相關的專案？\n• 這份履歷有哪些符合產品經理職缺的條件？\n• 如何聯絡本人？\n\n約 10 分鐘內可接續追問同一件作品，例如「這張用了什麼配色？」；輸入「清除對話」可重新開始。短期記憶可能提早失效，屆時請補上作品名稱。回答依據公開履歷；找不到足夠資料的問題會記錄給履歷主人確認與補充。\n\n隨時輸入「首頁」「選單」或「回首頁」，就能重新開啟三張履歷卡；輸入「隱私」查看資料使用方式。';
+  return '怎麼用這個履歷助理\n\n' +
+    '• 名片：輸入「名片」或「首頁」，看姓名、職務、學校、標籤與聯繫方式。\n' +
+    '• 想了解這個人：五個入口（個人特質、專業技能、工作經歷、專案、其他），點了就會依履歷回答。\n' +
+    '• 貼職缺比對：把職缺貼上來，直接列出有履歷依據、待確認、不符的條件，可再產生面談問題。\n' +
+    '• 聯繫本人／留下邀約：取得 Email，或在 LINE 填三個問題送出邀約，本人會收到通知。\n\n' +
+    '也可以直接打字提問，例如「做過哪些資料分析專案？」「這份履歷符合產品經理職缺嗎？」。\n\n' +
+    '回答只依據公開履歷，履歷沒寫的會明說；短時間內可針對同一件作品追問，輸入「清除對話」可重來。輸入「隱私」查看資料使用方式。';
 }
 
 /**
@@ -2242,38 +2248,38 @@ function contactButton_(label, data) { return { type: 'button', height: 'sm', st
 
 /** 以原生 Flex 幾何圖形畫小型複製圖示，不需外部圖片網址。 */
 function copyEmailIcon_(email) {
+  var c = CARD_COLORS_;
   function sheet(left, top, fill) { return { type: 'box', layout: 'vertical', position: 'absolute',
     width: '12px', height: '14px', offsetStart: left + 'px', offsetTop: top + 'px', cornerRadius: '2px',
-    borderWidth: '1px', borderColor: '#23735B', backgroundColor: fill, contents: [] }; }
+    borderWidth: '1px', borderColor: c.accent, backgroundColor: fill, contents: [] }; }
   return { type: 'box', layout: 'vertical', width: '32px', height: '32px', flex: 0, cornerRadius: '8px',
-    backgroundColor: '#E8EFE9', action: { type: 'clipboard', label: '複製 Email', clipboardText: email },
-    contents: [sheet(11, 6, '#E8EFE9'), sheet(7, 10, '#FAFBF8')] };
+    backgroundColor: c.soft, action: { type: 'clipboard', label: '複製 Email', clipboardText: email },
+    contents: [sheet(11, 6, c.soft), sheet(7, 10, '#FFFFFF')] };
 }
 
-/** 首頁、文字意圖與「聯繫本人」按鈕共用這張卡片。 */
+/** 首頁、文字意圖與「聯繫本人」按鈕共用這張卡片；配色與名片一致。 */
 function contactMessage_(cfg, prepared) {
-  var contact;
+  var c = CARD_COLORS_, contact;
   try { contact = publicContact_(cfg, prepared); } catch (_) { contact = { email: '', available: false, unavailable: true }; }
-  var contents = [{ type: 'text', text: '聯繫本人', size: 'lg', weight: 'bold', color: '#143D35' },
-    { type: 'text', text: '面試邀約、職缺介紹或合作洽詢，都可以從這裡開始。', size: 'sm', wrap: true, color: '#53635E', margin: 'md' }];
+  var contents = [cardText_('面試邀約、職缺介紹或合作洽詢，都可以從這裡開始。', 'sm', c.ink, false)];
   if (contact.email) {
-    var address = { type: 'text', text: contact.email, size: 'sm', wrap: true, flex: 1, color: '#23735B' };
+    var address = { type: 'text', text: contact.email, size: 'sm', wrap: true, flex: 1, color: c.accent, weight: 'bold' };
     if (contact.available) address.action = { type: 'postback', label: '取得 Email', data: 'contact:email', displayText: '取得 Email' };
-    contents.push({ type: 'box', layout: 'horizontal', alignItems: 'center', spacing: 'sm', margin: 'md',
+    contents.push({ type: 'box', layout: 'horizontal', alignItems: 'center', spacing: 'sm', paddingAll: '10px', cornerRadius: '10px', backgroundColor: c.chip,
       contents: contact.available ? [address, copyEmailIcon_(contact.email)] : [address] });
   }
-  var buttons = [];
-  if (contact.available) {
-    contents.push({ type: 'text', text: '點右側圖示複製信箱；也可點信箱取得純文字，再自行寄信。', size: 'xs', wrap: true, color: '#687770', margin: 'md' });
-  }
-  else contents.push({ type: 'text', text: contact.unavailable ? '目前無法讀取聯絡資料，可先留下邀約。' : '目前尚未提供可收信的 Email，可先留下邀約。', size: 'xs', wrap: true, color: '#687770', margin: 'md' });
-  contents.push({ type: 'text', text: 'LINE 邀約：在這裡填寫，確認送出後由機器人通知本人。', size: 'xs', wrap: true, color: '#687770', margin: 'md' });
+  if (contact.available) contents.push(cardText_('點右側圖示複製信箱，或點信箱取得純文字，再自行寄信。', 'xxs', c.sub, false));
+  else contents.push(cardText_(contact.unavailable ? '目前無法讀取聯絡資料，可先留下邀約。' : '目前尚未提供可收信的 Email，可先留下邀約。', 'xxs', c.sub, false));
+  contents.push({ type: 'separator', color: c.rule });
+  contents.push(cardText_('或直接在 LINE 留邀約：三個問題，送出後由機器人通知本人。剛比對過職缺的話，會一併附上結果。', 'xxs', c.sub, false));
   var invitationButton = contactButton_('在 LINE 留邀約', 'invite:start');
-  invitationButton.style = 'primary'; invitationButton.color = '#23735B';
-  buttons.push(invitationButton, contactButton_('回首頁', 'nav:home'));
-  return { type: 'flex', altText: '聯繫本人｜Email 與留下邀約', quickReply: quickReply_(), contents: { type: 'bubble', size: 'kilo',
-    body: { type: 'box', layout: 'vertical', paddingAll: '20px', contents: contents },
-    footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: buttons } } };
+  invitationButton.style = 'primary'; invitationButton.color = c.accent;
+  return { type: 'flex', altText: '聯繫本人｜Email 與留下邀約', quickReply: quickReply_(), contents: { type: 'bubble', size: 'mega',
+    header: { type: 'box', layout: 'horizontal', paddingAll: '12px', paddingStart: '16px', backgroundColor: c.accent, contents: [
+      cardText_('CONTACT', 'xxs', '#FFFFFF', false), cardText_('聯繫本人', 'xxs', '#B9C8E6', false, { align: 'end' })
+    ] },
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: 'md', backgroundColor: '#FFFFFF', contents: contents },
+    footer: { type: 'box', layout: 'vertical', paddingAll: '12px', paddingTop: '0px', spacing: 'sm', backgroundColor: '#FFFFFF', contents: [invitationButton, contactButton_('回首頁', 'nav:home')] } } };
 }
 
 function invitationKey_(userId, cfg) { return 'invite:' + sha256_(ScriptApp.getScriptId() + ':' + cfg.docId + ':' + userId); }
