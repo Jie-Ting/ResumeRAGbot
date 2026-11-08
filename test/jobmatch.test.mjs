@@ -14,7 +14,8 @@ function fixture(){
   const prior=f.state.response;
   f.state.response=call=>{
     const schema=call.body?.generationConfig?.responseSchema?.properties;
-    if(schema?.must)return candidate({title:'AI 應用工程師',location:'台北市內湖區',years:'3 年以上',education:'資訊相關科系',must:['Python','SQL','REST API'],nice:['Google Apps Script','資料視覺化','不存在的條件']});
+    if(schema?.must)return candidate({title:'AI 應用工程師',location:'台北市內湖區',years:'3 年以上',education:'資訊相關科系',
+      must:[{label:'Python',category:'技能'},{label:'SQL',category:'技能'},{label:'REST API',category:'經驗'}],nice:[{label:'Google Apps Script',category:'工具'},{label:'資料視覺化',category:'技能'},{label:'不存在的條件',category:'其他'}]});
     if(schema?.results){
       const payload=JSON.parse(call.body.contents[0].parts[0].text);
       const python=payload.evidence.find(e=>e.text.includes('pandas'));
@@ -40,7 +41,9 @@ test('paste flow: chooser → paste → result card straight away, with a review
   const result=last(f)[0],rj=JSON.stringify(result);
   assert.match(result.altText,/符合 4、待確認 4、不符 0/);
   const rows=result.contents.body.contents[4].contents.map(r=>JSON.stringify(r));
-  assert.match(rows.find(r=>r.includes('台北市內湖區')),/✔/);assert.match(rows.find(r=>r.includes('台北市內湖區')),/台北或新北/);
+  assert.match(rows.find(r=>r.includes('台北市內湖區')),/✔/);assert.match(rows.find(r=>r.includes('台北市內湖區')),/台北或新北/);assert.match(rows.find(r=>r.includes('台北市內湖區')),/地點符合：/);
+  assert.match(rows.find(r=>r.includes('3 年以上')),/年資符合：/);assert.match(rows.find(r=>r.includes('資訊相關科系')),/學歷符合：/);
+  assert.match(rows.find(r=>r.includes('"Python"')),/技能符合：/);assert.match(rows.find(r=>r.includes('"REST API"')),/經驗待確認：/);assert.match(rows.find(r=>r.includes('Google Apps Script')),/工具待確認：/);
   assert.match(rows.find(r=>r.includes('3 年以上')),/✔/);assert.match(rows.find(r=>r.includes('3 年以上')),/四年三個月/);
   assert.match(rows.find(r=>r.includes('資訊相關科系')),/✔/);
   assert.match(rows.find(r=>r.includes('"Python"')),/✔/);assert.match(rows.find(r=>r.includes('"Python"')),/pandas/);
@@ -54,7 +57,7 @@ test('paste flow: chooser → paste → result card straight away, with a review
   assert.match(last(f)[0].altText,/符合 4、待確認 4、不符 0/);
   const questionsData=result.contents.footer.contents[0].action.data;
   f.gas.handleEvent_(post(questionsData,'s5'),cfg);
-  const questions=last(f)[0].text;assert.match(questions,/SQL：履歷未提到/);assert.match(questions,/REST API/);assert.match(questions,/薪資與到職日/);
+  const questions=last(f)[0].text;assert.match(questions,/技能｜SQL：履歷未提到/);assert.match(questions,/經驗｜REST API/);assert.match(questions,/薪資與到職日/);
   assert.equal(f.state.documentWrites,writes,'job postings must never be written to the Doc');
   assert(!f.state.calls.some(c=>c.url.endsWith(':generateContent')&&c.body.contents[0].parts[0].text.includes('待補充')));
 });
